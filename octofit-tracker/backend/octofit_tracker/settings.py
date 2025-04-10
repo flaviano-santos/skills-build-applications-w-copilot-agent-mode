@@ -100,5 +100,4 @@ DATABASES = {
     }
 }
 
-INSTALLED_APPS += ['corsheaders']
-MIDDLEWARE.insert(0, 'corsheaders.middleware.CorsMiddleware')
+INSTALLED_APPS = list(dict.fromkeys(INSTALLED_APPS))
