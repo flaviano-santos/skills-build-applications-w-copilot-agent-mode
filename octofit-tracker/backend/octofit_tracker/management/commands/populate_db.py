@@ -1,4 +1,5 @@
 import json
+from datetime import timedelta
 from django.core.management.base import BaseCommand
 from octofit_tracker.models import User, Team, Activity, Leaderboard, Workout
 
@@ -6,22 +7,19 @@ class Command(BaseCommand):
     help = 'Populate the database with test data'
 
     def handle(self, *args, **kwargs):
-        with open('octofit_tracker/test_data.json', 'r') as file:
+        with open('octofit-tracker/backend/octofit_tracker/test_data.json', 'r') as file:
             data = json.load(file)
 
         # Populate users
         for user_data in data['users']:
             User.objects.get_or_create(**user_data)
 
-        # Populate teams
-        for team_data in data['teams']:
-            members = team_data.pop('members')
-            team, _ = Team.objects.get_or_create(**team_data)
-            team.members.set(User.objects.filter(username__in=members))
-
-        # Populate activities
+        # Convert duration string to timedelta
         for activity_data in data['activities']:
             user = User.objects.get(username=activity_data.pop('user'))
+            duration_str = activity_data.pop('duration')
+            hours, minutes, seconds = map(int, duration_str.split(':'))
+            activity_data['duration'] = timedelta(hours=hours, minutes=minutes, seconds=seconds)
             Activity.objects.get_or_create(user=user, **activity_data)
 
         # Populate leaderboard
@@ -32,5 +30,12 @@ class Command(BaseCommand):
         # Populate workouts
         for workout_data in data['workouts']:
             Workout.objects.get_or_create(**workout_data)
+
+        # Save team instances after setting members
+        for team_data in data['teams']:
+            members = team_data.pop('members')
+            team, _ = Team.objects.get_or_create(**team_data)
+            team.members.set(User.objects.filter(username__in=members))
+            team.save()
 
         self.stdout.write(self.style.SUCCESS('Database populated successfully!'))
